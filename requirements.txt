@@ -1,0 +1,6 @@
+discord.py>=2.3
+python-dotenv
+nltk
+spacy
+scikit-learn
+pystempel
