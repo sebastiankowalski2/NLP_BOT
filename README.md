@@ -1,12 +1,17 @@
 # Discord TODO + NLP bot
 
 ## Uruchomienie
+Wymagana wersja Pythona: **3.11-3.13** (dla operacji `stem` z `pystempel`).
+
 1. https://discord.com/developers/applications -> New Application -> Bot -> skopiuj token.
 2. OAuth2 -> URL Generator: scopes `bot` + `applications.commands`, zaproś bota na serwer.
-3. Instalacja:
+3. Instalacja (Windows, PowerShell):
+   py -3.12 -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   python -m pip install --upgrade pip
    pip install -r requirements.txt
    python -m spacy download pl_core_news_sm
-4. `cp .env.example .env`, uzupełnij `DISCORD_TOKEN` i `ALBUM_LAST_DIGIT`.
+4. `Copy-Item .env.example .env`, uzupełnij `DISCORD_TOKEN` i `ALBUM_LAST_DIGIT`.
 5. `python bot.py`
 
 ## Publikacja na GitHub

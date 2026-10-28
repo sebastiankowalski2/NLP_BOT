@@ -3,4 +3,4 @@ python-dotenv
 nltk
 spacy
 scikit-learn
-pystempel
+pystempel; python_version < "3.14"

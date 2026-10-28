@@ -1,6 +1,7 @@
 """Operacje NLP na treści zadań (język polski)."""
 import os
 import re
+import sys
 import unicodedata
 from functools import lru_cache
 
@@ -11,7 +12,7 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 # --- Indywidualny x-gram wyliczany z ostatniej cyfry numeru albumu -----------
 # Ostatnia cyfra 4-9 -> x = cyfra; 0-3 -> x = cyfra + 4
-ALBUM_LAST_DIGIT = int(os.getenv("ALBUM_LAST_DIGIT", "6"))
+ALBUM_LAST_DIGIT = int(os.getenv("ALBUM_LAST_DIGIT", "0"))
 X = ALBUM_LAST_DIGIT if ALBUM_LAST_DIGIT >= 4 else ALBUM_LAST_DIGIT + 4
 
 
@@ -36,9 +37,14 @@ def _nlp():
 
 @lru_cache(maxsize=1)
 def _stemmer():
-    from stempel import StempelStemmer  # polski stemmer (pystempel)
+    # pystempel 2.0.0 używa importlib.resources.Resource, które nie działa w Python 3.14+
+    if sys.version_info >= (3, 14):
+        raise RuntimeError(
+            "Operacja 'stem' wymaga Pythona 3.11-3.13 (pystempel nie wspiera 3.14+)."
+        )
+    from pystempel import Stemmer  # polski stemmer
 
-    return StempelStemmer.default()
+    return Stemmer.default()
 
 
 # --- Tokenizacja -------------------------------------------------------------
@@ -151,7 +157,7 @@ def tfidf(text: str, corpus: list[str]) -> str:
 # --- Stemming, lematyzacja, stopwords ---------------------------------------
 def stem(text: str) -> list[tuple[str, str]]:
     s = _stemmer()
-    return [(t, s.stem(t) or t) for t in tokens_nltk(clean_text(text))]
+    return [(t, s(t) or t) for t in tokens_nltk(clean_text(text))]
 
 
 def lemmatize(text: str) -> list[tuple[str, str]]:
