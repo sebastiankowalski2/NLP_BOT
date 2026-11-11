@@ -1,7 +1,6 @@
 """Operacje NLP na treści zadań (język polski)."""
 import os
 import re
-import sys
 import unicodedata
 from functools import lru_cache
 
@@ -12,9 +11,8 @@ from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 # --- Indywidualny x-gram wyliczany z ostatniej cyfry numeru albumu -----------
 # Ostatnia cyfra 4-9 -> x = cyfra; 0-3 -> x = cyfra + 4
-ALBUM_LAST_DIGIT = int(os.getenv("ALBUM_LAST_DIGIT", "0"))
+ALBUM_LAST_DIGIT = int(os.getenv("ALBUM_LAST_DIGIT", "6"))
 X = ALBUM_LAST_DIGIT if ALBUM_LAST_DIGIT >= 4 else ALBUM_LAST_DIGIT + 4
-XGRAM_NAME = f"{X}gram"
 
 
 # --- Zasoby (ładowane leniwie) ----------------------------------------------
@@ -38,14 +36,9 @@ def _nlp():
 
 @lru_cache(maxsize=1)
 def _stemmer():
-    # pystempel 2.0.0 używa importlib.resources.Resource, które nie działa w Python 3.14+
-    if sys.version_info >= (3, 14):
-        raise RuntimeError(
-            "Operacja 'stem' wymaga Pythona 3.11-3.13 (pystempel nie wspiera 3.14+)."
-        )
-    from pystempel import Stemmer  # polski stemmer
+    from stempel import StempelStemmer  # polski stemmer (pystempel)
 
-    return Stemmer.default()
+    return StempelStemmer.default()
 
 
 # --- Tokenizacja -------------------------------------------------------------
@@ -158,7 +151,7 @@ def tfidf(text: str, corpus: list[str]) -> str:
 # --- Stemming, lematyzacja, stopwords ---------------------------------------
 def stem(text: str) -> list[tuple[str, str]]:
     s = _stemmer()
-    return [(t, s(t) or t) for t in tokens_nltk(clean_text(text))]
+    return [(t, s.stem(t) or t) for t in tokens_nltk(clean_text(text))]
 
 
 def lemmatize(text: str) -> list[tuple[str, str]]:
@@ -172,9 +165,6 @@ def remove_stopwords(text: str) -> list[str]:
 
 # --- Dispatcher dla komendy /task -------------------------------------------
 def run_operation(op: str, text: str, corpus: list[str]) -> str:
-    if op == XGRAM_NAME:
-        return f"{X}-gram:\n{make_ngrams(text, X)}"
-
     match op:
         case "tokens_nltk":
             return str(tokens_nltk(text))
@@ -192,6 +182,8 @@ def run_operation(op: str, text: str, corpus: list[str]) -> str:
             return str(make_ngrams(text, 2))
         case "trigram":
             return str(make_ngrams(text, 3))
+        case "xgram":
+            return f"{X}-gram (ostatnia cyfra albumu = {ALBUM_LAST_DIGIT}):\n{make_ngrams(text, X)}"
         case "bow":
             return bow(text, corpus)
         case "tfidf":
@@ -207,6 +199,6 @@ def run_operation(op: str, text: str, corpus: list[str]) -> str:
 
 OPERATIONS = [
     "tokens_nltk", "tokens_spacy", "tokens_compare", "clean", "normalize",
-    "unigram", "bigram", "trigram", XGRAM_NAME, "bow", "tfidf",
+    "unigram", "bigram", "trigram", "xgram", "bow", "tfidf",
     "stem", "lemma", "stopwords",
 ]

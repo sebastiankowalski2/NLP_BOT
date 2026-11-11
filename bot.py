@@ -6,11 +6,11 @@ import discord
 from discord import app_commands
 from dotenv import load_dotenv
 
-load_dotenv()
-
+import classification_commands
 import db
 import nlp_utils
 
+load_dotenv()
 TOKEN = os.environ["DISCORD_TOKEN"]
 GUILD_ID = os.getenv("GUILD_ID")  # opcjonalnie: natychmiastowa synchronizacja na jednym serwerze
 
@@ -30,6 +30,7 @@ class TodoBot(discord.Client):
 
 
 bot = TodoBot()
+classification_commands.setup(bot.tree)  # zadanie 2: /prepare_data_for_classification, /classifier, /evaluate
 
 
 # --- Pomocnicze --------------------------------------------------------------
@@ -53,15 +54,15 @@ def chunks(text: str, size: int = 1900):
 
 def fmt(t: db.Task) -> str:
     rel = f" ↳ `{t.relation[:8]}`" if t.relation else ""
-    return f"`{t.id}` [{t.status}|{t.priority}] {t.description}{rel}"
+    label = f" #{t.label}" if t.label else ""
+    return f"`{t.id}` [{t.status}|{t.priority}] {t.description}{rel}{label}"
 
 
 async def task_autocomplete(_: discord.Interaction, current: str):
     cur = current.lower()
-    tasks = await asyncio.to_thread(db.list_tasks)
     return [
         app_commands.Choice(name=f"{t.id[:8]} – {t.description}"[:100], value=t.id)
-        for t in tasks
+        for t in db.list_tasks()
         if cur in t.id or cur in t.description.lower()
     ][:25]
 
@@ -125,11 +126,11 @@ async def delete(interaction: discord.Interaction, id: str):
 @app_commands.choices(field=[app_commands.Choice(name=o, value=o) for o in nlp_utils.OPERATIONS])
 @app_commands.autocomplete(id=task_autocomplete)
 async def task_cmd(interaction: discord.Interaction, id: str, field: str):
-    await interaction.response.defer()
-    t = await asyncio.to_thread(db.get_task, id)
+    t = db.get_task(id)
     if not t:
-        return await interaction.followup.send("❌ Nie znaleziono zadania.", ephemeral=True)
-    corpus = [x.description for x in await asyncio.to_thread(db.list_tasks)]
+        return await interaction.response.send_message("❌ Nie znaleziono zadania.", ephemeral=True)
+    await interaction.response.defer()  # modele NLP mogą potrzebować chwili
+    corpus = [x.description for x in db.list_tasks()]
     try:
         result = await asyncio.to_thread(nlp_utils.run_operation, field, t.description, corpus)
     except Exception as e:  # np. brak modelu spaCy

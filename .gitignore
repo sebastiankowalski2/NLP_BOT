@@ -30,3 +30,20 @@ htmlcov/
 Thumbs.db
 .vscode/
 .idea/
+
+# Trained models and experiment artifacts
+models/
+results/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.nbconvert.ipynb
+
+# Python packaging/build artifacts
+build/
+dist/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.bak
